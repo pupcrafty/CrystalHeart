@@ -1,0 +1,17 @@
+# Godot 4+ cache/imports
+.godot/
+
+# Godot 3 legacy (safe to ignore if present)
+.import/
+
+# Exported builds
+.export/
+
+# C# / Mono (if enabled)
+.mono/
+
+# Android build outputs
+/android/
+
+# OS
+.DS_Store

@@ -1,0 +1,22 @@
+{
+  "size": 300,
+  "steps": 1200,
+  "output_format": "png",
+  "pygame": true,
+  "scale": 3,
+  "run_note": "Save a log of images with configurations and last instructions for each run. Save images as PNG.",
+
+  "length_threshold": 0.4,
+
+  "thickness_scale": 1.0,
+  "length_scale": 3.0,
+  "split_charge_threshold": 30,
+  "split_area_reference": 25.0,
+
+  "root_length": 1.0,
+  "root_thickness": 1.0,
+  "square_size": 1.0,
+  "child_length": 1.0,
+  "child_thickness": 1.0,
+  "split_total_angle": 30.0
+}

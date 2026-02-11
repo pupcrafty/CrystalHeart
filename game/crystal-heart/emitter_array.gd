@@ -23,6 +23,7 @@ func _process(delta: float) -> void:
 			clean_up_list.append(index)
 		else:
 			particle.step(delta)
+	apply_particle_interactions(delta)
 	clean_up_list.sort()
 	clean_up_list.reverse()
 	for index in clean_up_list:
@@ -46,8 +47,11 @@ func add_particle(particle: FluidParticle)->void:
 	particles.append(particle)
 
 func emit_particles()->void:
+	var y_velocity_offset = randf()/2-0.25
 	for emitter in emitters:
-		particles.append(emitter.emit_one(100))
+		var particle = emitter.emit_one(5, y_velocity_offset)
+		particle.parent_emmiter_index = emitters.find(emitter)
+		particles.append(particle)
 		
 func apply_particle_interactions(delta: float)->void:
 	var particle_num : int = particles.size()
@@ -55,4 +59,4 @@ func apply_particle_interactions(delta: float)->void:
 		for j in range(i+1, particle_num):
 			var particle_i :FluidParticle = particles.get(i)
 			var particle_j :FluidParticle = particles.get(j)
-			particle_i.ineract(particle_j,delta)
+			particle_i.interact(particle_j,delta)

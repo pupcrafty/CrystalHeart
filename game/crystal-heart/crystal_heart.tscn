@@ -2,8 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bpp3gu3a3pi67" path="res://crystal_layer.gd" id="1_j8cde"]
 [ext_resource type="Script" uid="uid://coibxh2bue1mb" path="res://crystal_points.gd" id="2_2ynui"]
-[ext_resource type="Script" uid="uid://dn381nc5bynx4" path="res://emmitter_array.gd" id="3_2ynui"]
-[ext_resource type="Script" uid="uid://c82muddhsronj" path="res://emmitter.gd" id="4_onumj"]
+[ext_resource type="Script" uid="uid://dn381nc5bynx4" path="res://emitter_array.gd" id="3_2ynui"]
 
 [node name="CrystalHeart" type="Node2D" unique_id=2077400022]
 
@@ -20,10 +19,7 @@ script = ExtResource("1_j8cde")
 script = ExtResource("2_2ynui")
 vertex_points = PackedVector2Array(30, 30, 30, -30, -30, -30, -30, 30)
 
-[node name="EmmitterArray" type="Node2D" parent="CrystalLayer" unique_id=1167989469]
+[node name="EmitterArray" type="Node2D" parent="CrystalLayer" unique_id=1167989469]
 script = ExtResource("3_2ynui")
-
-[node name="Emmitter" type="Node2D" parent="CrystalLayer/EmmitterArray" unique_id=659450380]
-script = ExtResource("4_onumj")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=854517737]

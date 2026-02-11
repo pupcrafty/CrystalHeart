@@ -14,18 +14,18 @@
 - `CrystalPoints` computes edge midpoints on `_ready()`; midpoints are not yet consumed elsewhere.
 
 ## Particle System (New)
-- `emmitter_array.gd` defines `EmmitterArray` (Node2D) that stores `FluidParticle` instances, steps them each frame, removes dead ones, and draws them.
-- `emmitter.gd` defines a Node2D that spawns one `FluidParticle` on `_ready()` and draws a red circle at its position.
+- `emitter_array.gd` defines `EmitterArray` (Node2D) that stores `FluidParticle` instances, steps them each frame, removes dead ones, and draws them.
+- `emitter.gd` defines a Node2D that spawns one `FluidParticle` on `_ready()` and draws a red circle at its position.
 - `fluid_particle.gd` defines `FluidParticle` with position, velocity, deceleration, lifetime, and step/dead logic.
 - These scripts are present in the project folder but are not referenced by the main scene yet.
 
 ## Changes Since Journal 01
 - Added particle-related scripts:
-  - `emmitter.gd`
-  - `emmitter_array.gd`
+  - `emitter.gd`
+  - `emitter_array.gd`
   - `fluid_particle.gd`
 - No changes detected in the main scene structure (`crystal_heart.tscn`).
 
 ## Notes
-- If the particle system should be visible in-game, it needs nodes in `crystal_heart.tscn` that use `EmmitterArray` and `Emmitter` scripts.
-- Spelling: filenames use `emmitter` (double m). If this is unintended, consider renaming later.
+- If the particle system should be visible in-game, it needs nodes in `crystal_heart.tscn` that use `EmitterArray` and `Emitter` scripts.
+- Spelling: filenames use `emitter`.

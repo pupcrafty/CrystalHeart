@@ -1,6 +1,6 @@
 class_name LatticeParticle
 
-var pos : Vector2
-var open_slots = []
-var is_frontier: bool
-var draw_this: bool
+var pos: Vector2 = Vector2.ZERO
+var open_slots: Array[LatticeSlot] = []
+var is_frontier: bool = false
+var draw_this: bool = true

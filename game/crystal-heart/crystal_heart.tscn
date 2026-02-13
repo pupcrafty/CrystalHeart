@@ -18,7 +18,7 @@ script = ExtResource("1_j8cde")
 
 [node name="CrystalPoints" type="Node" parent="CrystalLayer" unique_id=910211040]
 script = ExtResource("2_2ynui")
-vertex_points = PackedVector2Array(30, 30, 30, -30, -30, -30, -30, 30)
+vertex_points = PackedVector2Array(60, 30, 60, -30, 0, -30, 0, 30)
 
 [node name="EmitterArray" type="Node2D" parent="CrystalLayer" unique_id=1167989469]
 script = ExtResource("3_2ynui")

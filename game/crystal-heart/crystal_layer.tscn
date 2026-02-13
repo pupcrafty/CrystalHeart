@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://crystal_layer.gd" id="1_layer"]
+[ext_resource type="Script" path="res://crystal_points.gd" id="2_points"]
+[ext_resource type="Script" path="res://emitter_array.gd" id="3_emitters"]
+[ext_resource type="Script" path="res://lattice.gd" id="4_lattice"]
+
+[node name="CrystalLayer" type="Node2D"]
+script = ExtResource("1_layer")
+
+[node name="CrystalArea" type="Area2D" parent="."]
+
+[node name="CrystalShape" type="CollisionPolygon2D" parent="CrystalArea"]
+
+[node name="CrystalFill" type="Polygon2D" parent="."]
+
+[node name="CrystalPoints" type="Node" parent="."]
+script = ExtResource("2_points")
+vertex_points = PackedVector2Array(30, 30, 30, -30, -30, -30, -30, 30)
+
+[node name="EmitterArray" type="Node2D" parent="."]
+script = ExtResource("3_emitters")
+
+[node name="Lattice" type="Node2D" parent="."]
+script = ExtResource("4_lattice")

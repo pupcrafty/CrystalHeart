@@ -14,6 +14,8 @@ var slots_available_per_particle: Array[int] = [2,3,4,5,6]
 @export var particle_draw_radius: float = 5.0
 @export var particle_color: Color = Color(0.25, 0.45, 1.0, 1.0)
 @export var particle_min_distance_factor: float = 0.8
+@export var perimeter_max_vertices: int = 16
+@export var perimeter_min_vertex_spacing_factor: float = 0.9
 
 var boundary_points: PackedVector2Array = PackedVector2Array()
 var frontier_slots: Array[LatticeSlot] = []
@@ -71,9 +73,292 @@ func begin_crystalization(corners: PackedVector2Array)->void:
 
 func complete_crystalization() -> void:
 	is_crystallizing = false
-	layer_control.crystalizing = false
-	layer_control.fully_crystalized = true
+	layer_control.handle_crystalization_complete(build_vertex_points_from_particles())
 	print("Crystalization complete. Placed particles =", placed_particles.size())
+
+
+func build_vertex_points_from_particles() -> PackedVector2Array:
+	if placed_particles.size() < 3:
+		return boundary_points.duplicate()
+
+	var perimeter_points: Array[Vector2] = collect_perimeter_points_from_frontier()
+	if perimeter_points.size() >= 3:
+		var ordered_points: PackedVector2Array = sort_points_around_center(perimeter_points)
+		var simplified_points: PackedVector2Array = simplify_straight_runs(ordered_points)
+		simplified_points = simplify_by_spacing(simplified_points, slot_spacing * perimeter_min_vertex_spacing_factor)
+		simplified_points = reduce_to_max_vertices(simplified_points, perimeter_max_vertices)
+		if simplified_points.size() >= 3:
+			return enforce_points_outside_polygon(simplified_points, boundary_points)
+
+	var points: Array[Vector2] = []
+	for particle: LatticeParticle in placed_particles:
+		append_unique_point(points, particle.pos, slot_spacing * 0.2)
+
+	return enforce_points_outside_polygon(convex_hull(points), boundary_points)
+
+
+func collect_perimeter_points_from_frontier() -> Array[Vector2]:
+	var perimeter_points: Array[Vector2] = []
+	var offset: float = slot_spacing * 0.5
+	var merge_distance: float = slot_spacing * 0.35
+
+	for slot: LatticeSlot in frontier_slots:
+		if slot.filled:
+			continue
+		var dir: Vector2 = slot.dir.normalized()
+		if dir == Vector2.ZERO:
+			continue
+		# Use a half-step along open frontier directions to sample the current crystal perimeter.
+		var perimeter_point: Vector2 = slot.pos + dir * offset
+		append_unique_point(perimeter_points, perimeter_point, merge_distance)
+
+	return perimeter_points
+
+
+func append_unique_point(points: Array[Vector2], candidate: Vector2, min_distance: float) -> void:
+	var min_distance_squared: float = min_distance * min_distance
+	for point: Vector2 in points:
+		if point.distance_squared_to(candidate) < min_distance_squared:
+			return
+	points.append(candidate)
+
+
+func sort_points_around_center(points: Array[Vector2]) -> PackedVector2Array:
+	var center: Vector2 = Vector2.ZERO
+	for point: Vector2 in points:
+		center += point
+	center /= float(points.size())
+
+	var sorted_points: Array[Vector2] = points.duplicate()
+	sorted_points.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		var angle_a: float = atan2(a.y - center.y, a.x - center.x)
+		var angle_b: float = atan2(b.y - center.y, b.x - center.x)
+		return angle_a < angle_b
+	)
+
+	var result: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in sorted_points:
+		result.append(point)
+	return result
+
+
+func simplify_straight_runs(points: PackedVector2Array) -> PackedVector2Array:
+	if points.size() <= 3:
+		return points.duplicate()
+
+	var reduced: Array[Vector2] = []
+	for point: Vector2 in points:
+		reduced.append(point)
+
+	var max_distance_from_line: float = slot_spacing * 0.08
+	var min_direction_dot: float = 0.98
+	var changed: bool = true
+
+	while changed and reduced.size() > 3:
+		changed = false
+		var count: int = reduced.size()
+		for i in range(0, count):
+			var prev_index: int = (i - 1 + count) % count
+			var next_index: int = (i + 1) % count
+			var prev: Vector2 = reduced[prev_index]
+			var curr: Vector2 = reduced[i]
+			var next: Vector2 = reduced[next_index]
+
+			if is_straight_run_point(prev, curr, next, max_distance_from_line, min_direction_dot):
+				reduced.remove_at(i)
+				changed = true
+				break
+
+	var result: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in reduced:
+		result.append(point)
+	return result
+
+
+func is_straight_run_point(
+	prev: Vector2,
+	curr: Vector2,
+	next: Vector2,
+	max_distance_from_line: float,
+	min_direction_dot: float
+) -> bool:
+	var seg_a: Vector2 = curr - prev
+	var seg_b: Vector2 = next - curr
+	if seg_a == Vector2.ZERO or seg_b == Vector2.ZERO:
+		return true
+
+	var dir_a: Vector2 = seg_a.normalized()
+	var dir_b: Vector2 = seg_b.normalized()
+	if dir_a.dot(dir_b) < min_direction_dot:
+		return false
+
+	var line: Vector2 = next - prev
+	var line_length: float = line.length()
+	if line_length <= 0.0:
+		return true
+
+	var distance: float = abs(cross(prev, next, curr)) / line_length
+	return distance <= max_distance_from_line
+
+
+func simplify_by_spacing(points: PackedVector2Array, min_spacing: float) -> PackedVector2Array:
+	if points.size() <= 3:
+		return points.duplicate()
+
+	var spacing: float = max(0.001, min_spacing)
+	var spacing_squared: float = spacing * spacing
+	var kept: Array[Vector2] = []
+
+	for i in range(0, points.size()):
+		var point: Vector2 = points[i]
+		if kept.is_empty():
+			kept.append(point)
+			continue
+		var last_kept: Vector2 = kept[kept.size() - 1]
+		if last_kept.distance_squared_to(point) >= spacing_squared:
+			kept.append(point)
+
+	if kept.size() >= 2:
+		var first_point: Vector2 = kept[0]
+		var last_point: Vector2 = kept[kept.size() - 1]
+		if first_point.distance_squared_to(last_point) < spacing_squared:
+			kept.remove_at(kept.size() - 1)
+
+	if kept.size() < 3:
+		return points.duplicate()
+
+	var result: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in kept:
+		result.append(point)
+	return result
+
+
+func reduce_to_max_vertices(points: PackedVector2Array, max_vertices: int) -> PackedVector2Array:
+	if points.size() <= 3:
+		return points.duplicate()
+	if max_vertices < 3 or points.size() <= max_vertices:
+		return points.duplicate()
+
+	var working: Array[Vector2] = []
+	for point: Vector2 in points:
+		working.append(point)
+
+	while working.size() > max_vertices and working.size() > 3:
+		var best_index: int = -1
+		var smallest_area: float = INF
+		var count: int = working.size()
+
+		for i in range(0, count):
+			var prev: Vector2 = working[(i - 1 + count) % count]
+			var curr: Vector2 = working[i]
+			var next: Vector2 = working[(i + 1) % count]
+			var tri_area: float = abs(cross(prev, curr, next))
+			if tri_area < smallest_area:
+				smallest_area = tri_area
+				best_index = i
+
+		if best_index == -1:
+			break
+		working.remove_at(best_index)
+
+	var result: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in working:
+		result.append(point)
+	return result
+
+
+func enforce_points_outside_polygon(points: PackedVector2Array, polygon: PackedVector2Array) -> PackedVector2Array:
+	if points.size() == 0 or polygon.size() < 3:
+		return points.duplicate()
+
+	var center: Vector2 = get_polygon_center(polygon)
+	var min_clearance: float = slot_spacing * 0.12
+	var step_distance: float = slot_spacing * 0.25
+	var max_steps: int = 12
+	var result: PackedVector2Array = PackedVector2Array()
+
+	for point: Vector2 in points:
+		var adjusted: Vector2 = point
+		var step_index: int = 0
+		while step_index < max_steps and is_inside_or_too_close_to_polygon(adjusted, polygon, min_clearance):
+			var outward_dir: Vector2 = (adjusted - center).normalized()
+			if outward_dir == Vector2.ZERO:
+				outward_dir = Vector2.RIGHT
+			adjusted += outward_dir * step_distance
+			step_index += 1
+		result.append(adjusted)
+
+	return result
+
+
+func is_inside_or_too_close_to_polygon(point: Vector2, polygon: PackedVector2Array, min_clearance: float) -> bool:
+	if Geometry2D.is_point_in_polygon(point, polygon):
+		return true
+
+	var min_distance_squared: float = min_distance_squared_to_polygon_edges(point, polygon)
+	return min_distance_squared <= min_clearance * min_clearance
+
+
+func min_distance_squared_to_polygon_edges(point: Vector2, polygon: PackedVector2Array) -> float:
+	if polygon.size() < 2:
+		return INF
+
+	var min_distance_squared: float = INF
+	for i in range(0, polygon.size()):
+		var a: Vector2 = polygon[i]
+		var b: Vector2 = polygon[(i + 1) % polygon.size()]
+		var closest: Vector2 = Geometry2D.get_closest_point_to_segment(point, a, b)
+		var dist_squared: float = point.distance_squared_to(closest)
+		if dist_squared < min_distance_squared:
+			min_distance_squared = dist_squared
+
+	return min_distance_squared
+
+
+func convex_hull(points: Array[Vector2]) -> PackedVector2Array:
+	if points.size() < 3:
+		var fallback: PackedVector2Array = PackedVector2Array()
+		for point: Vector2 in points:
+			fallback.append(point)
+		return fallback
+
+	points.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		if is_equal_approx(a.x, b.x):
+			return a.y < b.y
+		return a.x < b.x
+	)
+
+	var lower: Array[Vector2] = []
+	for point: Vector2 in points:
+		while lower.size() >= 2 and cross(lower[lower.size() - 2], lower[lower.size() - 1], point) <= 0.0:
+			lower.pop_back()
+		lower.append(point)
+
+	var upper: Array[Vector2] = []
+	for i in range(points.size() - 1, -1, -1):
+		var point: Vector2 = points[i]
+		while upper.size() >= 2 and cross(upper[upper.size() - 2], upper[upper.size() - 1], point) <= 0.0:
+			upper.pop_back()
+		upper.append(point)
+
+	if not lower.is_empty():
+		lower.pop_back()
+	if not upper.is_empty():
+		upper.pop_back()
+
+	var hull_points: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in lower:
+		hull_points.append(point)
+	for point: Vector2 in upper:
+		hull_points.append(point)
+
+	return hull_points
+
+
+func cross(origin: Vector2, a: Vector2, b: Vector2) -> float:
+	var oa: Vector2 = a - origin
+	var ob: Vector2 = b - origin
+	return oa.x * ob.y - oa.y * ob.x
 
 
 func calculate_perimeter(corners: PackedVector2Array) -> float:

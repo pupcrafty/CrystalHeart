@@ -53,14 +53,19 @@ func _draw() -> void:
 func add_particle(particle: FluidParticle) -> void:
 	particles.append(particle)
 
+func clear_particles() -> void:
+	particles.clear()
+	queue_redraw()
+
 func emit_particles() -> void:
 	var y_velocity_offset: float = randf() / 2.0 - 0.25
 	for emitter in emitters:
-		var crowd: int = get_emmiter_crowd(emitter)
-		var speed: float = emit_base_speed + float(crowd) * emit_crowd_multiplier
-		var particle: FluidParticle = emitter.emit_one(speed, y_velocity_offset)
-		particle.parent_emmiter_index = emitters.find(emitter)
-		particles.append(particle)
+		if emitter.pos.x !=0:
+			var crowd: int = get_emmiter_crowd(emitter)
+			var speed: float = emit_base_speed + float(crowd) * emit_crowd_multiplier
+			var particle: FluidParticle = emitter.emit_one(speed, y_velocity_offset)
+			particle.parent_emmiter_index = emitters.find(emitter)
+			particles.append(particle)
 
 func apply_particle_interactions(delta: float) -> void:
 	var particle_num: int = particles.size()

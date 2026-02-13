@@ -8,6 +8,7 @@ func _ready() -> void:
 	pass # Replace with function body.
 
 func emit_one(speed: float, y_vel_off_set: float) -> FluidParticle:
+
 	var p: FluidParticle = FluidParticle.new()
 	p.pos = pos
 	p.vel = (Vector2.from_angle(emit_angle) + Vector2(0.0, y_vel_off_set)) * speed

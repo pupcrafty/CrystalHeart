@@ -14,9 +14,13 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pass
 
+func set_vertex_points(points: PackedVector2Array) -> void:
+	vertex_points = points.duplicate()
+	set_mid_points()
+
 func set_mid_points() -> void:
+	side_mid_points = PackedVector2Array()
 	if vertex_points.size() > 3:
-		side_mid_points = PackedVector2Array()
 		for vertex_index in range(0, vertex_points.size()):
 			if vertex_index < vertex_points.size() - 1:
 				var mid_point: Vector2 = get_mid_point(vertex_points.get(vertex_index), vertex_points.get(vertex_index + 1))

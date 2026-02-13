@@ -34,7 +34,8 @@ func _process(delta: float) -> void:
 	count_down = clampf(count_down - delta, 0.0, 1.0)
 	if count_down == 0.0:
 		count_down = 1.0
-		emit_particles()
+		if not layer_control.crystalizing:
+			emit_particles()
 
 	queue_redraw()
 

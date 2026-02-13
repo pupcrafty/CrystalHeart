@@ -22,6 +22,8 @@ func _ready() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
+	if crystalizing:
+		return
 	crystalization_count_down = clampf(crystalization_count_down - delta, 0.0, time_till_crystalize)
 	if crystalization_count_down == 0.0:
 		crystalization_count_down = time_till_crystalize
@@ -50,4 +52,5 @@ func set_up_emitters() -> void:
 		emitter_array.emitters.append(emitter)
 
 func crystalize() -> void:
+	crystalizing = true
 	lattice.begin_crystalization(crystal_points.vertex_points)

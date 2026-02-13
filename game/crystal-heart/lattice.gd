@@ -6,6 +6,7 @@ var slots_available_per_particle: Array[int] = [2,3,4,5,6]
 @export var slot_spacing: float = 20.0
 @export var capture_radius: float = 14.0
 @export var max_conversions_per_frame: int = 4
+@export var completion_timeout_seconds: float = 0.5
 @export var slot_draw_radius: float = 3.0
 @export var slot_dir_draw_length: float = 12.0
 @export var slot_color: Color = Color(0.2, 0.9, 1.0, 1.0)
@@ -18,6 +19,7 @@ var boundary_points: PackedVector2Array = PackedVector2Array()
 var frontier_slots: Array[LatticeSlot] = []
 var placed_particles: Array[LatticeParticle] = []
 var is_crystallizing: bool = false
+var time_without_conversion: float = 0.0
 
 @onready var layer_control: CrystalLayerControl = $".."
 
@@ -32,7 +34,12 @@ func _process(delta: float) -> void:
 		return
 	var changed: bool = convert_nearby_fluid_particles()
 	if changed:
+		time_without_conversion = 0.0
 		queue_redraw()
+	else:
+		time_without_conversion += delta
+		if time_without_conversion >= completion_timeout_seconds:
+			complete_crystalization()
 
 
 func _draw() -> void:
@@ -50,6 +57,7 @@ func begin_crystalization(corners: PackedVector2Array)->void:
 	frontier_slots.clear()
 	placed_particles.clear()
 	is_crystallizing = true
+	time_without_conversion = 0.0
 
 	slots = int(slots_available_per_particle.pick_random())
 	print("Slots chosen: ", slots)
@@ -59,6 +67,13 @@ func begin_crystalization(corners: PackedVector2Array)->void:
 	generate_even_frontier_slot_positions()
 	print("Frontier slots generated =", frontier_slots.size())
 	queue_redraw()
+
+
+func complete_crystalization() -> void:
+	is_crystallizing = false
+	layer_control.crystalizing = false
+	layer_control.fully_crystalized = true
+	print("Crystalization complete. Placed particles =", placed_particles.size())
 
 
 func calculate_perimeter(corners: PackedVector2Array) -> float:

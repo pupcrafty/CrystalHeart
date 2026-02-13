@@ -2,6 +2,7 @@ extends Node2D
 class_name CrystalLayerControl
 @export var emit_ready: bool = true
 @export var crystalizing: bool = false
+@export var fully_crystalized: bool = false
 
 @onready var col_poly: CollisionPolygon2D = $CrystalArea/CrystalShape
 @onready var vis_poly: Polygon2D = $CrystalFill
@@ -53,4 +54,5 @@ func set_up_emitters() -> void:
 
 func crystalize() -> void:
 	crystalizing = true
+	fully_crystalized = false
 	lattice.begin_crystalization(crystal_points.vertex_points)

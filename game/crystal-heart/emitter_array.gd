@@ -9,6 +9,7 @@ var emitters: Array[LiquidEmitter] = []
 var count_down: float = 0.1
 var emit_base_speed: float = 10.0
 var emit_crowd_multiplier: float = 5.0
+var crystalize_outward_acceleration: float = 200.0
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -24,7 +25,10 @@ func _process(delta: float) -> void:
 			clean_up_list.append(index)
 		else:
 			particle.step(delta)
-			apply_shape_attract(particle, delta)
+			if layer_control.crystalizing:
+				apply_crystalize_repel(particle, delta)
+			else:
+				apply_shape_attract(particle, delta)
 	apply_particle_interactions(delta)
 	clean_up_list.sort()
 	clean_up_list.reverse()
@@ -84,6 +88,15 @@ func apply_shape_attract(particle: FluidParticle, delta: float) -> void:
 	var target_point: Vector2 = closest_point_on_emmiter_segment(particle.pos, closest_two_emitter_locations[0], closest_two_emitter_locations[1])
 	particle.attract_to_shape_point(target_point, delta)
 
+func apply_crystalize_repel(particle: FluidParticle, delta: float) -> void:
+	var crystal_center: Vector2 = get_crystal_center()
+	var direction: Vector2 = particle.pos - crystal_center
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	else:
+		direction = direction.normalized()
+	particle.vel += direction * crystalize_outward_acceleration * delta
+
 func closest_two(reference: Vector2, points: Array[Vector2]) -> Array[Vector2]:
 	var sorted_points: Array[Vector2] = points.duplicate()
 
@@ -119,3 +132,12 @@ func get_emmiter_crowd(emitter: LiquidEmitter) -> int:
 		if dist < sizes_squared:
 			count += 1
 	return count
+
+func get_crystal_center() -> Vector2:
+	var points: PackedVector2Array = layer_control.crystal_points.vertex_points
+	if points.size() == 0:
+		return Vector2.ZERO
+	var center: Vector2 = Vector2.ZERO
+	for point in points:
+		center += point
+	return center / float(points.size())

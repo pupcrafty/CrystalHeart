@@ -2,6 +2,7 @@ class_name LiquidEmitter
 
 var pos: Vector2
 var emit_angle: float
+var size: float = 5
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	pass # Replace with function body.

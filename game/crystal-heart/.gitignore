@@ -13,5 +13,8 @@
 # Android build outputs
 /android/
 
+# Godot script UID metadata
+*.uid
+
 # OS
 .DS_Store

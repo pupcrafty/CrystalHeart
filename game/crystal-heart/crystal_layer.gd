@@ -1,6 +1,7 @@
 extends Node2D
 class_name CrystalLayerControl
-@export var emit_ready = false
+@export var emit_ready = true
+@export var crystalizing = false
 
 @onready var col_poly: CollisionPolygon2D = $CrystalArea/CrystalShape
 @onready var vis_poly: Polygon2D = $CrystalFill
@@ -33,3 +34,9 @@ func set_up_emitters()->void:
 		emitter.set_position(point)
 		emitter.set_emit_angle(point.angle())
 		emitter_array.emitters.append(emitter)
+	for point in crystal_points.side_mid_points:
+		var emitter = LiquidEmitter.new()
+		emitter.set_position(point)
+		emitter.set_emit_angle(point.angle())
+		emitter_array.emitters.append(emitter)
+		

@@ -7,10 +7,11 @@ class_name FluidParticle
 var deceleraton:float = 0.1
 var age: float = 0.0
 var size: float = 10.0
-var lifetime: float = 20.0
+var lifetime: float = 120.0
+var shape_attract_acceleration :float= 1
 
 
-var attract_repel_force = 100
+var attract_repel_force = 40
 
 
 func step(delta: float) -> void:
@@ -41,3 +42,10 @@ func attract_repulse(particle:FluidParticle, intensity:float, direction: Vector2
 func combine_velocities(particle:FluidParticle, intensity:float)->void:
 	vel+=10*particle.vel*(1-intensity)
 	particle.vel+=10*vel*(1-intensity)
+	
+func attract_to_shape_point(target_point: Vector2, delta: float):
+	if target_point == pos:
+		return
+	var direction: Vector2 = target_point-pos
+	direction = direction.normalized()
+	vel+=delta*direction*shape_attract_acceleration

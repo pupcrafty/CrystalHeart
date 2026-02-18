@@ -20,7 +20,7 @@ func step(delta: float) -> void:
 
 
 func is_dead() -> bool:
-	return age >= lifetime
+	return age >= lifetime or pos.x < 0
 
 func interact(particle: FluidParticle, delta: float) -> void:
 	var direction: Vector2 = particle.pos - pos

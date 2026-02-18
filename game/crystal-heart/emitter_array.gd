@@ -10,6 +10,7 @@ var count_down: float = 0.1
 var emit_base_speed: float = 10.0
 var emit_crowd_multiplier: float = 5.0
 var crystalize_outward_acceleration: float = 200.0
+var spawn_force_delay_seconds: float = 0.2
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -25,11 +26,12 @@ func _process(delta: float) -> void:
 			clean_up_list.append(index)
 		else:
 			particle.step(delta)
-			if layer_control.crystalizing:
-				apply_crystalize_repel(particle, delta)
-			else:
-				apply_shape_attract(particle, delta)
-	apply_particle_interactions(delta)
+			if particle.age >= spawn_force_delay_seconds:
+				if layer_control.crystalizing:
+					apply_crystalize_repel(particle, delta)
+				else:
+					apply_shape_attract(particle, delta)
+	apply_particle_interactions(delta, spawn_force_delay_seconds)
 	clean_up_list.sort()
 	clean_up_list.reverse()
 	for index in clean_up_list:
@@ -53,21 +55,26 @@ func _draw() -> void:
 func add_particle(particle: FluidParticle) -> void:
 	particles.append(particle)
 
+func clear_particles() -> void:
+	particles.clear()
+	queue_redraw()
+
 func emit_particles() -> void:
-	var y_velocity_offset: float = randf() / 2.0 - 0.25
 	for emitter in emitters:
 		var crowd: int = get_emmiter_crowd(emitter)
 		var speed: float = emit_base_speed + float(crowd) * emit_crowd_multiplier
-		var particle: FluidParticle = emitter.emit_one(speed, y_velocity_offset)
+		var particle: FluidParticle = emitter.emit_one(speed)
 		particle.parent_emmiter_index = emitters.find(emitter)
 		particles.append(particle)
 
-func apply_particle_interactions(delta: float) -> void:
+func apply_particle_interactions(delta: float, min_age: float) -> void:
 	var particle_num: int = particles.size()
 	for i in range(0, particle_num):
 		for j in range(i + 1, particle_num):
 			var particle_i: FluidParticle = particles.get(i)
 			var particle_j: FluidParticle = particles.get(j)
+			if particle_i.age < min_age or particle_j.age < min_age:
+				continue
 			particle_i.interact(particle_j, delta)
 
 func apply_shape_attract(particle: FluidParticle, delta: float) -> void:

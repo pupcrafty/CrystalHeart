@@ -16,6 +16,7 @@ var slots_available_per_particle: Array[int] = [2,3,4,5,6]
 @export var particle_min_distance_factor: float = 0.8
 @export var perimeter_max_vertices: int = 16
 @export var perimeter_min_vertex_spacing_factor: float = 0.9
+@export var min_growth_x: float = 0.0
 
 var boundary_points: PackedVector2Array = PackedVector2Array()
 var frontier_slots: Array[LatticeSlot] = []
@@ -55,7 +56,7 @@ func _draw() -> void:
 			draw_circle(particle.pos, particle_draw_radius, particle_color)
 
 func begin_crystalization(corners: PackedVector2Array)->void:
-	boundary_points = corners.duplicate()
+	boundary_points = clamp_points_to_growth_boundary(corners)
 	frontier_slots.clear()
 	placed_particles.clear()
 	is_crystallizing = true
@@ -79,22 +80,87 @@ func complete_crystalization() -> void:
 
 func build_vertex_points_from_particles() -> PackedVector2Array:
 	if placed_particles.size() < 3:
-		return boundary_points.duplicate()
+		return clamp_points_to_growth_boundary(boundary_points)
 
-	var perimeter_points: Array[Vector2] = collect_perimeter_points_from_frontier()
-	if perimeter_points.size() >= 3:
-		var ordered_points: PackedVector2Array = sort_points_around_center(perimeter_points)
-		var simplified_points: PackedVector2Array = simplify_straight_runs(ordered_points)
-		simplified_points = simplify_by_spacing(simplified_points, slot_spacing * perimeter_min_vertex_spacing_factor)
-		simplified_points = reduce_to_max_vertices(simplified_points, perimeter_max_vertices)
+	var rough_perimeter: PackedVector2Array = build_rough_perimeter_from_particles()
+	if rough_perimeter.size() >= 3:
+		var simplified_points: PackedVector2Array = simplify_straight_runs(rough_perimeter)
+		simplified_points = simplify_by_spacing(simplified_points, slot_spacing * perimeter_min_vertex_spacing_factor * 0.7)
+		simplified_points = reduce_to_max_vertices(simplified_points, get_dynamic_perimeter_max_vertices())
 		if simplified_points.size() >= 3:
-			return enforce_points_outside_polygon(simplified_points, boundary_points)
+			var expanded: PackedVector2Array = enforce_points_outside_polygon(simplified_points, boundary_points)
+			return clamp_points_to_growth_boundary(ensure_non_shrinking_area(expanded, boundary_points))
 
 	var points: Array[Vector2] = []
 	for particle: LatticeParticle in placed_particles:
 		append_unique_point(points, particle.pos, slot_spacing * 0.2)
 
-	return enforce_points_outside_polygon(convex_hull(points), boundary_points)
+	var fallback_hull: PackedVector2Array = enforce_points_outside_polygon(convex_hull(points), boundary_points)
+	return clamp_points_to_growth_boundary(ensure_non_shrinking_area(fallback_hull, boundary_points))
+
+
+func build_rough_perimeter_from_particles() -> PackedVector2Array:
+	var center: Vector2 = get_polygon_center(boundary_points)
+	var sector_count: int = clampi(max(max(perimeter_max_vertices * 2, boundary_points.size() * 3), 24), 24, 96)
+	var max_radius_by_sector: Array[float] = []
+	var dir_by_sector: Array[Vector2] = []
+
+	for _i: int in range(0, sector_count):
+		max_radius_by_sector.append(-INF)
+		dir_by_sector.append(Vector2.ZERO)
+
+	var boundary_bias: float = slot_spacing * 0.08
+	for boundary_point: Vector2 in boundary_points:
+		consider_perimeter_sample(boundary_point, center, sector_count, max_radius_by_sector, dir_by_sector, boundary_bias)
+
+	for particle: LatticeParticle in placed_particles:
+		consider_perimeter_sample(particle.pos, center, sector_count, max_radius_by_sector, dir_by_sector, 0.0)
+
+	for slot: LatticeSlot in frontier_slots:
+		if slot.filled:
+			continue
+		var target: Vector2 = slot.pos + slot.dir * slot_spacing
+		consider_perimeter_sample(target, center, sector_count, max_radius_by_sector, dir_by_sector, slot_spacing * 0.25)
+
+	var rough_points: PackedVector2Array = PackedVector2Array()
+	for i in range(0, sector_count):
+		if max_radius_by_sector[i] <= 0.0:
+			continue
+		var dir: Vector2 = dir_by_sector[i]
+		if dir == Vector2.ZERO:
+			continue
+		rough_points.append(center + dir * max_radius_by_sector[i])
+
+	return rough_points
+
+
+func consider_perimeter_sample(
+	point: Vector2,
+	center: Vector2,
+	sector_count: int,
+	max_radius_by_sector: Array[float],
+	dir_by_sector: Array[Vector2],
+	extra_radius: float
+) -> void:
+	if point.x < min_growth_x:
+		return
+	var delta: Vector2 = point - center
+	if delta == Vector2.ZERO:
+		return
+
+	var angle_01: float = (atan2(delta.y, delta.x) + PI) / TAU
+	var sector_float: float = floor(angle_01 * float(sector_count))
+	var sector: int = clampi(int(sector_float), 0, sector_count - 1)
+	var radius: float = delta.length() + extra_radius
+	if radius > max_radius_by_sector[sector]:
+		max_radius_by_sector[sector] = radius
+		dir_by_sector[sector] = delta.normalized()
+
+
+func get_dynamic_perimeter_max_vertices() -> int:
+	var bonus_vertices: int = int(floor(float(placed_particles.size()) / 6.0))
+	var target: int = max(perimeter_max_vertices, boundary_points.size() + bonus_vertices)
+	return clampi(target, 8, 96)
 
 
 func collect_perimeter_points_from_frontier() -> Array[Vector2]:
@@ -291,6 +357,45 @@ func enforce_points_outside_polygon(points: PackedVector2Array, polygon: PackedV
 	return result
 
 
+func ensure_non_shrinking_area(candidate: PackedVector2Array, previous: PackedVector2Array) -> PackedVector2Array:
+	if candidate.size() < 3 or previous.size() < 3:
+		return candidate.duplicate()
+
+	var previous_area: float = polygon_area_abs(previous)
+	var candidate_area: float = polygon_area_abs(candidate)
+	if previous_area <= 0.0 or candidate_area <= 0.0:
+		return candidate.duplicate()
+	if candidate_area >= previous_area * 0.995:
+		return candidate.duplicate()
+
+	var scale: float = sqrt(previous_area / candidate_area) * 1.01
+	var center: Vector2 = get_polygon_center(candidate)
+	var result: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in candidate:
+		var offset: Vector2 = point - center
+		if offset == Vector2.ZERO:
+			offset = Vector2.RIGHT * slot_spacing * 0.1
+		result.append(center + offset * scale)
+
+	return result
+
+
+func polygon_area_abs(points: PackedVector2Array) -> float:
+	return abs(polygon_signed_area(points))
+
+
+func polygon_signed_area(points: PackedVector2Array) -> float:
+	if points.size() < 3:
+		return 0.0
+
+	var area2: float = 0.0
+	for i in range(0, points.size()):
+		var a: Vector2 = points[i]
+		var b: Vector2 = points[(i + 1) % points.size()]
+		area2 += a.x * b.y - b.x * a.y
+	return area2 * 0.5
+
+
 func is_inside_or_too_close_to_polygon(point: Vector2, polygon: PackedVector2Array, min_clearance: float) -> bool:
 	if Geometry2D.is_point_in_polygon(point, polygon):
 		return true
@@ -411,6 +516,8 @@ func convert_nearby_fluid_particles() -> bool:
 			continue
 
 		var candidate_pos: Vector2 = slot.pos + slot.dir * slot_spacing
+		if candidate_pos.x < min_growth_x:
+			continue
 		var fluid_index: int = find_nearby_fluid_particle_index(
 			emitter_array.particles,
 			candidate_pos,
@@ -486,6 +593,8 @@ func generate_frontier_slots_from_particle(particle: LatticeParticle, incoming_d
 func add_frontier_slot_if_valid(origin_pos: Vector2, dir: Vector2) -> LatticeSlot:
 	var min_distance: float = slot_spacing * particle_min_distance_factor
 	var candidate_pos: Vector2 = origin_pos + dir * slot_spacing
+	if candidate_pos.x < min_growth_x:
+		return null
 	if not can_place_particle_at(candidate_pos, min_distance):
 		return null
 	if has_open_slot_for_target(candidate_pos, min_distance):
@@ -572,3 +681,16 @@ func compute_outward_normal(sample_pos: Vector2, tangent: Vector2, polygon_cente
 	if from_center.dot(normal_a) >= from_center.dot(normal_b):
 		return normal_a
 	return normal_b
+
+
+func clamp_point_to_growth_boundary(point: Vector2) -> Vector2:
+	if point.x < min_growth_x:
+		return Vector2(min_growth_x, point.y)
+	return point
+
+
+func clamp_points_to_growth_boundary(points: PackedVector2Array) -> PackedVector2Array:
+	var clamped: PackedVector2Array = PackedVector2Array()
+	for point: Vector2 in points:
+		clamped.append(clamp_point_to_growth_boundary(point))
+	return clamped

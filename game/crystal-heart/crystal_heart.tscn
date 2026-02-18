@@ -4,26 +4,45 @@
 [ext_resource type="Script" uid="uid://coibxh2bue1mb" path="res://crystal_points.gd" id="2_2ynui"]
 [ext_resource type="Script" uid="uid://dn381nc5bynx4" path="res://emitter_array.gd" id="3_2ynui"]
 [ext_resource type="Script" uid="uid://bopcftche86c1" path="res://lattice.gd" id="4_onumj"]
+[ext_resource type="Script" uid="uid://8e5lk4jl5lav" path="res://file_output.gd" id="5_fileoutput"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_w7v1w"]
+viewport_path = NodePath("CrystalGrowth")
 
 [node name="CrystalHeart" type="Node2D" unique_id=2077400022]
 
-[node name="CrystalLayer" type="Node2D" parent="." unique_id=62778406]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=854517737]
+
+[node name="CrystalGrowth" type="SubViewport" parent="." unique_id=1575593979]
+
+[node name="CrystalLayer" type="Node2D" parent="CrystalGrowth" unique_id=62778406]
+position = Vector2(-2, 256)
 script = ExtResource("1_j8cde")
 
-[node name="CrystalArea" type="Area2D" parent="CrystalLayer" unique_id=893876061]
+[node name="CrystalArea" type="Area2D" parent="CrystalGrowth/CrystalLayer" unique_id=893876061]
 
-[node name="CrystalShape" type="CollisionPolygon2D" parent="CrystalLayer/CrystalArea" unique_id=1769093956]
+[node name="CrystalShape" type="CollisionPolygon2D" parent="CrystalGrowth/CrystalLayer/CrystalArea" unique_id=1769093956]
 
-[node name="CrystalFill" type="Polygon2D" parent="CrystalLayer" unique_id=937168277]
+[node name="CrystalFill" type="Polygon2D" parent="CrystalGrowth/CrystalLayer" unique_id=937168277]
 
-[node name="CrystalPoints" type="Node" parent="CrystalLayer" unique_id=910211040]
+[node name="CrystalPoints" type="Node" parent="CrystalGrowth/CrystalLayer" unique_id=910211040]
 script = ExtResource("2_2ynui")
 vertex_points = PackedVector2Array(60, 30, 60, -30, 0, -30, 0, 30)
 
-[node name="EmitterArray" type="Node2D" parent="CrystalLayer" unique_id=1167989469]
+[node name="EmitterArray" type="Node2D" parent="CrystalGrowth/CrystalLayer" unique_id=1167989469]
 script = ExtResource("3_2ynui")
 
-[node name="Lattice" type="Node2D" parent="CrystalLayer" unique_id=426754382]
+[node name="Lattice" type="Node2D" parent="CrystalGrowth/CrystalLayer" unique_id=426754382]
 script = ExtResource("4_onumj")
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=854517737]
+[node name="FileOutput" type="Node" parent="CrystalGrowth/CrystalLayer" unique_id=283694322]
+script = ExtResource("5_fileoutput")
+
+[node name="CrystalViewLeft" type="Sprite2D" parent="." unique_id=109456066]
+position = Vector2(-256, 0)
+texture = SubResource("ViewportTexture_w7v1w")
+flip_h = true
+
+[node name="CrystalViewRight" type="Sprite2D" parent="." unique_id=920808835]
+position = Vector2(256, 0)
+texture = SubResource("ViewportTexture_w7v1w")

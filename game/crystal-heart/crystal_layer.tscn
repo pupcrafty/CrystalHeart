@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://crystal_points.gd" id="2_points"]
 [ext_resource type="Script" path="res://emitter_array.gd" id="3_emitters"]
 [ext_resource type="Script" path="res://lattice.gd" id="4_lattice"]
+[ext_resource type="Script" path="res://file_output.gd" id="5_fileoutput"]
 
 [node name="CrystalLayer" type="Node2D"]
 script = ExtResource("1_layer")
@@ -23,3 +24,6 @@ script = ExtResource("3_emitters")
 
 [node name="Lattice" type="Node2D" parent="."]
 script = ExtResource("4_lattice")
+
+[node name="FileOutput" type="Node" parent="."]
+script = ExtResource("5_fileoutput")

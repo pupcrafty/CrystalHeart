@@ -72,8 +72,7 @@ func _process(_delta):
 	if not _is_connected or not _udp:
 		return
 	
-	# Check for incoming packets
-	_udp.wait = 0  # Non-blocking
+	# Poll queued packets; this is already non-blocking.
 	while _udp.get_available_packet_count() > 0:
 		var packet = _udp.get_packet()
 		_parse_osc_message(packet)

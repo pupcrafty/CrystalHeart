@@ -5,6 +5,8 @@
 [ext_resource type="Script" uid="uid://dn381nc5bynx4" path="res://emitter_array.gd" id="3_2ynui"]
 [ext_resource type="Script" uid="uid://bopcftche86c1" path="res://lattice.gd" id="4_onumj"]
 [ext_resource type="Script" uid="uid://8e5lk4jl5lav" path="res://file_output.gd" id="5_fileoutput"]
+[ext_resource type="Script" path="res://audio_service/audio_service_osc.gd" id="6_audiosvc"]
+[ext_resource type="Script" path="res://audio_service_debug_display.gd" id="7_audiodebug"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_w7v1w"]
 viewport_path = NodePath("CrystalGrowth")
@@ -27,7 +29,7 @@ script = ExtResource("1_j8cde")
 
 [node name="CrystalPoints" type="Node" parent="CrystalGrowth/CrystalLayer" unique_id=910211040]
 script = ExtResource("2_2ynui")
-vertex_points = PackedVector2Array(60, 30, 60, -30, 0, -30, 0, 30)
+vertex_points = PackedVector2Array(0, -20, 18, -50, 45, -55, 68, -40, 74, -18, 66, 8, 50, 35, 30, 58, 12, 74, 0, 80)
 
 [node name="EmitterArray" type="Node2D" parent="CrystalGrowth/CrystalLayer" unique_id=1167989469]
 script = ExtResource("3_2ynui")
@@ -37,6 +39,24 @@ script = ExtResource("4_onumj")
 
 [node name="FileOutput" type="Node" parent="CrystalGrowth/CrystalLayer" unique_id=283694322]
 script = ExtResource("5_fileoutput")
+
+
+[node name="AudioServiceOSC" type="Node" parent="." unique_id=1337001001]
+script = ExtResource("6_audiosvc")
+endpoint_names = ["/clock/bpm", "/clock/beat", "/clock/conf", "/clock/beat_id", "/clock/time", "/audio/bands_normalized"]
+
+[node name="AudioDebugDisplay" type="CanvasLayer" parent="." unique_id=1337001002]
+script = ExtResource("7_audiodebug")
+
+[node name="MarginContainer" type="MarginContainer" parent="AudioDebugDisplay"]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 420.0
+offset_bottom = 320.0
+
+[node name="DebugLabel" type="Label" parent="AudioDebugDisplay/MarginContainer"]
+text = "Audio debug: booting..."
+autowrap_mode = 2
 
 [node name="CrystalViewLeft" type="Sprite2D" parent="." unique_id=109456066]
 position = Vector2(-256, 0)
